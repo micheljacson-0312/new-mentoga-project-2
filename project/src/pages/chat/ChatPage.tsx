@@ -38,6 +38,7 @@ export default function ChatPage({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const syncTimerRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -52,9 +53,14 @@ export default function ChatPage({
   useEffect(() => {
     fetchMessages();
     const channel = subscribeToMessages();
+    syncTimerRef.current = setInterval(() => {
+      fetchMessages(false);
+    }, 4000);
+
     return () => {
       if (channel) supabase.removeChannel(channel);
       if (timerRef.current) clearInterval(timerRef.current);
+      if (syncTimerRef.current) clearInterval(syncTimerRef.current);
     };
   }, [conversationId]);
 
@@ -62,9 +68,9 @@ export default function ChatPage({
     scrollToBottom();
   }, [messages]);
 
-  const fetchMessages = async () => {
+  const fetchMessages = async (showLoader: boolean = true) => {
     try {
-      setLoading(true);
+      if (showLoader) setLoading(true);
       const { data, error } = await supabase
         .from("messages")
         .select("*")
@@ -72,7 +78,13 @@ export default function ChatPage({
         .order("created_at", { ascending: true });
 
       if (error) throw error;
-      setMessages(data || []);
+      setMessages((current) => {
+        const incoming = data || [];
+        if (current.length === incoming.length && current.every((msg, index) => msg.id === incoming[index]?.id && msg.is_billed === incoming[index]?.is_billed)) {
+          return current;
+        }
+        return incoming;
+      });
       
       const unbilled = (data || []).filter(m => !m.is_billed);
       setSessionCount({
@@ -84,7 +96,7 @@ export default function ChatPage({
     } catch (error) {
       console.error("Error fetching messages:", error);
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   };
 
@@ -117,7 +129,26 @@ export default function ChatPage({
           }
         }
       )
-      .subscribe();
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        () => {
+          fetchMessages(false);
+        }
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          fetchMessages(false);
+        }
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          console.warn("Chat realtime status:", status);
+        }
+      });
     return channel;
   };
 
@@ -143,13 +174,31 @@ export default function ChatPage({
         is_billed: false
       };
 
-      const { error } = await supabase.from("messages").insert([message]).select().single();
+      const { data, error } = await supabase.from("messages").insert([message]).select().single();
       if (error) throw error;
+
+      if (data) {
+        const inserted = data as Message;
+        setMessages((current) => {
+          if (current.find((item) => item.id === inserted.id)) return current;
+          return [...current, inserted];
+        });
+
+        if (!inserted.is_billed) {
+          setSessionCount((prev) => ({
+            ...prev,
+            messages: prev.messages + 1,
+            chars: prev.chars + (inserted.content?.length || 0),
+            audio: prev.audio + (inserted.message_type === "audio" ? 1 : 0),
+            video: prev.video + (inserted.message_type === "video" ? 1 : 0),
+          }));
+        }
+      }
       
       if (type === "text") setNewMessage("");
-      // Real-time listener will add it to state
     } catch (error) {
       console.error("Error sending message:", error);
+      setSessionNotice({ type: "error", text: "Failed to send message. Please try again." });
     }
   };
 
