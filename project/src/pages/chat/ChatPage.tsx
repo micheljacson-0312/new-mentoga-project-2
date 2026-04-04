@@ -39,6 +39,7 @@ export default function ChatPage({
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Session billing metrics
   const [sessionCount, setSessionCount] = useState({
@@ -124,7 +125,7 @@ export default function ChatPage({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const sendMessage = async (e?: React.FormEvent, type: string = "text", url?: string) => {
+  const sendMessage = async (e?: React.FormEvent, type: string = "text", url?: string, fileName?: string) => {
     e?.preventDefault();
     if (!profile) return;
     if (type === "text" && !newMessage.trim()) return;
@@ -135,7 +136,10 @@ export default function ChatPage({
         sender_id: profile.id,
         content: type === "text" ? newMessage.trim() : null,
         message_type: type,
-        attachment_url: url || null,
+        attachment_url: type === "attachment" ? url || null : null,
+        audio_url: type === "audio" ? url || null : null,
+        video_url: type === "video" ? url || null : null,
+        metadata: fileName ? { fileName } : null,
         is_billed: false
       };
 
@@ -193,12 +197,12 @@ export default function ChatPage({
 
   const uploadMedia = async (blob: Blob, type: string) => {
     try {
-      const ext = type === 'audio' ? 'webm' : 'mp4';
+      const ext = type === 'audio' ? 'webm' : 'webm';
       const fileName = `${profile?.id}/${Date.now()}.${ext}`;
       
       const { error: uploadError } = await supabase.storage
-        .from("chat-attachments")
-        .upload(fileName, blob);
+         .from("chat-attachments")
+         .upload(fileName, blob, { contentType: blob.type || undefined });
 
       if (uploadError) throw uploadError;
 
@@ -211,6 +215,36 @@ export default function ChatPage({
       console.error("Error uploading media:", error);
       setSessionNotice({ type: "error", text: "Failed to upload media. Please try again." });
     }
+  };
+
+  const uploadAttachment = async (file: File) => {
+    try {
+      const ext = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
+      const fileName = `${profile?.id}/${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("chat-attachments")
+        .upload(fileName, file, { contentType: file.type || undefined });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("chat-attachments")
+        .getPublicUrl(fileName);
+
+      await sendMessage(undefined, "attachment", publicUrl, file.name || `file.${ext}`);
+      setSessionNotice({ type: "success", text: "Attachment sent successfully." });
+    } catch (error) {
+      console.error("Error uploading attachment:", error);
+      setSessionNotice({ type: "error", text: "Failed to send attachment. Please try again." });
+    }
+  };
+
+  const handleAttachmentChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await uploadAttachment(file);
+    e.target.value = "";
   };
 
   const startBrowserCall = (mode: 'voice' | 'video') => {
@@ -355,19 +389,26 @@ export default function ChatPage({
                 }`}
               >
                 {message.message_type === 'audio' ? (
-                   <div className="flex items-center gap-3 min-w-[180px]">
-                      <button className={`p-2 rounded-full ${isOwn ? "bg-white/20" : "bg-blue-600/10 text-blue-600"}`}>
-                        <Play className="w-4 h-4 fill-current" />
-                      </button>
-                      <div className="flex-1 h-1 bg-slate-200/30 rounded-full overflow-hidden">
-                        <div className={`w-1/2 h-full ${isOwn ? "bg-white" : "bg-blue-600"}`}></div>
+                   <div className="min-w-[220px] space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Play className={`w-4 h-4 ${isOwn ? "text-white" : "text-blue-600"}`} />
+                        <span className={`text-[10px] font-bold ${isOwn ? "text-white/80" : "text-slate-400"}`}>VOICE MESSAGE</span>
                       </div>
-                      <span className={`text-[10px] font-bold ${isOwn ? "text-white/80" : "text-slate-400"}`}>VOICE</span>
+                      <audio src={message.audio_url || message.attachment_url || undefined} controls className="w-full max-w-[260px]" />
                    </div>
                 ) : message.message_type === 'video' ? (
                    <div className="rounded-lg overflow-hidden bg-slate-900 aspect-video flex items-center justify-center relative max-w-[280px]">
-                      <video src={message.attachment_url || undefined} className="w-full h-full" controls />
-                   </div>
+                      <video src={message.video_url || message.attachment_url || undefined} className="w-full h-full" controls />
+                    </div>
+                ) : message.message_type === 'attachment' ? (
+                   <a
+                     href={message.attachment_url || undefined}
+                     target="_blank"
+                     rel="noreferrer"
+                     className={`block text-sm font-bold underline break-all ${isOwn ? "text-white" : "text-blue-600"}`}
+                   >
+                     {message.metadata?.fileName || 'Open attachment'}
+                   </a>
                 ) : (
                    <p className="whitespace-pre-wrap text-sm">{message.content}</p>
                 )}
@@ -411,8 +452,14 @@ export default function ChatPage({
           </div>
         ) : (
           <form onSubmit={sendMessage} className="flex items-end gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              onChange={handleAttachmentChange}
+            />
             <div className="flex-1 bg-slate-100 rounded-2xl p-2 flex items-end gap-1">
-              <button type="button" className="p-2 text-slate-500 hover:text-blue-600">
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-slate-500 hover:text-blue-600">
                 <Paperclip className="w-5 h-5" />
               </button>
               <textarea
