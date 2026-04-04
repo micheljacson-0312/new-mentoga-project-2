@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { EmailService } from "@/services/emailService";
 import { Consultant } from "@/types";
-import { Clock, AlertCircle, Loader, CalendarDays } from "lucide-react";
+import { Clock, AlertCircle, Loader, CalendarDays, CreditCard } from "lucide-react";
 
 interface BookingPageProps {
   consultant: Consultant & { user?: any };
@@ -29,6 +29,8 @@ export default function BookingPage({
   const [dbSlots, setDbSlots] = useState<any[]>([]);
   const [generatedTimes, setGeneratedTimes] = useState<string[]>([]);
   const [fetchingSlots, setFetchingSlots] = useState(false);
+  const [stripeEnabled, setStripeEnabled] = useState(false);
+  const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchSlots = async () => {
@@ -43,6 +45,20 @@ export default function BookingPage({
     };
     fetchSlots();
   }, [consultant]);
+
+  useEffect(() => {
+    const fetchPaymentSettings = async () => {
+      const { data } = await supabase
+        .from("payment_provider_settings")
+        .select("is_enabled")
+        .eq("provider", "stripe")
+        .maybeSingle();
+
+      setStripeEnabled(!!data?.is_enabled);
+    };
+
+    fetchPaymentSettings();
+  }, []);
 
   useEffect(() => {
     if (!selectedDate) {
@@ -123,9 +139,9 @@ export default function BookingPage({
         .from("bookings")
         .insert([
           {
-            client_id: profile.id,
+            user_id: profile.id,
             consultant_id: consultant.user?.id || consultant.id,
-            service_type: serviceType,
+            booking_type: serviceType,
             scheduled_at: `${selectedDate}T${selectedTime}:00`,
             duration_minutes: duration,
             status: "pending",
@@ -138,20 +154,52 @@ export default function BookingPage({
 
       if (bookingError) throw bookingError;
 
-      const { error: paymentError } = await supabase.from("payments").insert([
+      if (stripeEnabled) {
+        const successUrl = `${window.location.origin}/?checkout=success&booking=${booking.id}`;
+        const cancelUrl = `${window.location.origin}/?checkout=cancel&booking=${booking.id}`;
+
+        const { data: stripeCheckout, error: stripeError } = await supabase.functions.invoke("stripe-create-payment", {
+          body: {
+            amount,
+            currency: "USD",
+            description: `${serviceType.replace("_", " ")} booking with ${consultant.user?.first_name || "consultant"}`,
+            bookingId: booking.id,
+            consultantId: consultant.user?.id || consultant.id,
+            userId: profile.id,
+            email: profile.email,
+            successUrl,
+            cancelUrl,
+          },
+        });
+
+        if (stripeError || !stripeCheckout?.checkoutUrl) {
+          await supabase.from("bookings").delete().eq("id", booking.id);
+          throw new Error(stripeError?.message || stripeCheckout?.error || "Could not start Stripe checkout");
+        }
+
+        window.location.assign(stripeCheckout.checkoutUrl);
+        return;
+      }
+
+      const { data: paymentRow, error: paymentError } = await supabase.from("payments").insert([
         {
           booking_id: booking.id,
-          user_id: profile.id, // Added user_id which is required
+          user_id: profile.id,
+          consultant_id: consultant.user?.id || consultant.id,
           amount: amount,
           currency: "USD",
+          payment_method: "manual",
           status: "pending",
+          description: `${serviceType.replace("_", " ")} booking request`,
         },
-      ]);
+      ]).select("id").single();
 
       if (paymentError) {
         await supabase.from("bookings").delete().eq("id", booking.id);
         throw paymentError;
       }
+
+      await supabase.from("bookings").update({ payment_id: paymentRow.id }).eq("id", booking.id);
 
       const formattedDate = new Date(selectedDate).toLocaleDateString();
       const formattedTime = new Date(`${selectedDate}T${selectedTime}`).toLocaleTimeString();
@@ -179,6 +227,7 @@ export default function BookingPage({
       }
 
       onSuccess();
+      setPaymentNotice(stripeEnabled ? null : "Booking requested. Payment is pending admin processing.");
     } catch (err: any) {
       setError(
         err.message || "Failed to create booking. Please try again."
@@ -245,6 +294,13 @@ export default function BookingPage({
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
               <p className="text-red-700 text-sm">{error}</p>
+            </div>
+          )}
+
+          {paymentNotice && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-start gap-3">
+              <CreditCard className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+              <p className="text-green-700 text-sm">{paymentNotice}</p>
             </div>
           )}
 
@@ -346,7 +402,7 @@ export default function BookingPage({
               </div>
               <div className="text-xs text-slate-500 flex items-center gap-1.5 pt-1">
                 <AlertCircle className="w-3.5 h-3.5" />
-                Platform fee (10%) calculated at final checkout
+                {stripeEnabled ? "You will be redirected to secure Stripe checkout" : "Stripe is disabled, so this will create a pending manual payment"}
               </div>
             </div>
 
@@ -356,7 +412,7 @@ export default function BookingPage({
               className="w-full bg-slate-900 hover:bg-black disabled:bg-slate-300 disabled:text-slate-500 text-white font-semibold py-4 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg disabled:shadow-none"
             >
               {loading && <Loader className="w-5 h-5 animate-spin" />}
-              {loading ? "Processing Booking..." : "Confirm & Request Booking"}
+              {loading ? "Processing Booking..." : stripeEnabled ? "Continue to Stripe Checkout" : "Confirm & Request Booking"}
             </button>
           </form>
         </div>

@@ -7,7 +7,15 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Missing Supabase configuration");
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storageKey: "mentoga-auth",
+    storage: typeof window !== "undefined" ? window.localStorage : undefined,
+  },
+});
 
 export type Database = {
   public: {
@@ -77,6 +85,19 @@ export type Database = {
           is_read: boolean;
           read_at: string | null;
           created_at: string;
+        };
+      };
+      payment_provider_settings: {
+        Row: {
+          id: string;
+          provider: string;
+          is_enabled: boolean;
+          is_test_mode: boolean;
+          publishable_key: string | null;
+          webhook_endpoint: string | null;
+          webhook_last_verified_at: string | null;
+          created_at: string;
+          updated_at: string;
         };
       };
       courses: {

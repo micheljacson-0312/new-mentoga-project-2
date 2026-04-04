@@ -76,3 +76,43 @@ npm run start
 - The app is a frontend SPA backed by Supabase.
 - The Node server only serves the built frontend and supports SPA routes like `/c/:slug`.
 - Direct chat billing requires the included Supabase migration to be applied.
+
+## Stripe Setup
+
+Use Supabase Edge Functions for Stripe secrets and webhook handling.
+
+1. Save non-secret Stripe settings from the admin panel:
+   - Enable Stripe
+   - Set test/live mode
+   - Save the Stripe publishable key
+   - Copy the webhook endpoint
+
+2. Set secret values in Supabase, not in the frontend:
+
+```bash
+supabase secrets set STRIPE_SECRET_KEY=sk_test_xxx STRIPE_WEBHOOK_SECRET=whsec_xxx
+```
+
+3. Deploy Stripe functions:
+
+```bash
+supabase functions deploy stripe-create-payment
+supabase functions deploy stripe-webhook
+```
+
+4. In Stripe dashboard, create a webhook using the admin panel webhook URL and subscribe to:
+   - `payment_intent.succeeded`
+   - `payment_intent.payment_failed`
+   - `charge.refunded`
+
+5. Apply database migrations:
+
+```bash
+supabase db push
+```
+
+Recommended architecture:
+- `Publishable key`: store in admin-managed Supabase table
+- `Secret key`: Supabase Edge Function secret
+- `Webhook secret`: Supabase Edge Function secret
+- `Webhook confirmation`: handled by `stripe-webhook` and reflected in admin settings

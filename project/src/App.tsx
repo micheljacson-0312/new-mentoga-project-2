@@ -36,10 +36,23 @@ function AppContent() {
     return localStorage.getItem("mentoga_currentPage") || "marketplace";
   });
   const [profileSlug, setProfileSlug] = useState<string | null>(null);
+  const [checkoutNotice, setCheckoutNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     // Check for /c/slug routing
     const path = window.location.pathname;
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get("checkout") === "success") {
+      setCheckoutNotice({ type: "success", text: "Stripe payment completed. Your booking has been recorded." });
+      window.history.replaceState({}, "", path);
+    }
+
+    if (params.get("checkout") === "cancel") {
+      setCheckoutNotice({ type: "error", text: "Stripe checkout was cancelled. You can try again anytime." });
+      window.history.replaceState({}, "", path);
+    }
+
     if (path.startsWith("/c/")) {
       const slug = path.split("/c/")[1];
       if (slug) {
@@ -109,6 +122,11 @@ function AppContent() {
         />
       )}
       <main className={`flex-1 ${currentPage === "consultant" ? "p-0" : "p-3 sm:p-4 md:p-12 pt-20 sm:pt-24 md:pt-12"} min-h-screen min-w-0`}>
+        {checkoutNotice && (
+          <div className={`mb-4 rounded-2xl px-4 py-3 text-sm font-bold ${checkoutNotice.type === "success" ? "bg-green-50 text-green-700 border border-green-100" : "bg-red-50 text-red-700 border border-red-100"}`}>
+            {checkoutNotice.text}
+          </div>
+        )}
         <Suspense fallback={<PageLoader />}>
           {currentPage === "marketplace" && (
             <Marketplace initialSlug={profileSlug} />
