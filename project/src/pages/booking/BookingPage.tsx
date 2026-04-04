@@ -203,7 +203,7 @@ export default function BookingPage({
         onClick={onBack}
       />
       
-      <div className="fixed inset-y-0 right-0 z-[60] w-full max-w-md bg-white shadow-2xl flex flex-col border-l border-slate-200 animate-slide-in-right">
+      <div className="fixed inset-0 md:inset-y-0 md:right-0 z-[60] w-full md:max-w-md bg-white shadow-2xl flex flex-col md:border-l border-slate-200 animate-slide-in-right">
         <style>{`
           @keyframes slideInRight {
             from { transform: translateX(100%); }
@@ -214,9 +214,9 @@ export default function BookingPage({
           }
         `}</style>
         
-        <div className="flex-none p-6 bg-white border-b border-slate-100 flex justify-between items-center z-10">
+        <div className="flex-none p-4 sm:p-6 bg-white border-b border-slate-100 flex justify-between items-start gap-3 z-10">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900 capitalize flex items-center gap-2">
+             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 capitalize flex items-center gap-2">
               <Clock className="w-6 h-6 text-blue-600" />
               Book {serviceType.replace("_", " ")}
             </h2>
@@ -230,7 +230,7 @@ export default function BookingPage({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
             <div className="p-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex justify-between items-center">
               <div>
@@ -297,7 +297,7 @@ export default function BookingPage({
                         <Loader className="w-6 h-6 animate-spin" />
                      </div>
                    ) : generatedTimes.length > 0 ? (
-                     <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
                        {generatedTimes.map(time => (
                          <button
                            key={time}

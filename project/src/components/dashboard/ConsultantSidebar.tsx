@@ -47,6 +47,7 @@ export default function ConsultantSidebar({
   onLogout 
 }: ConsultantSidebarProps) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const mainNav: NavItem[] = [
     { id: 'marketplace', label: 'Creators', icon: Globe },
@@ -81,7 +82,10 @@ export default function ConsultantSidebar({
     const isActive = activePage === item.id;
     return (
       <button
-        onClick={() => onNavigate(item.id)}
+        onClick={() => {
+          setMobileMenuOpen(false);
+          onNavigate(item.id);
+        }}
         className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
           isActive 
             ? 'bg-blue-50 text-blue-600 font-bold' 
@@ -100,7 +104,49 @@ export default function ConsultantSidebar({
   };
 
   return (
-    <div className="w-72 h-screen flex flex-col bg-white border-r border-slate-100 overflow-hidden shrink-0">
+    <>
+      <div className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-white border-b border-slate-100">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-black italic">M</div>
+          <div className="min-w-0">
+            <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Creator</p>
+            <p className="text-sm font-black text-slate-900 truncate">{profile?.first_name} {profile?.last_name}</p>
+          </div>
+        </div>
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          className="px-3 py-2 rounded-xl bg-slate-50 text-slate-700 font-bold text-sm"
+        >
+          Menu
+        </button>
+      </div>
+
+      {mobileMenuOpen && (
+        <>
+          <button type="button" className="fixed inset-0 z-40 bg-slate-900/40 md:hidden" onClick={() => setMobileMenuOpen(false)} />
+          <div className="fixed inset-y-0 left-0 z-50 w-[88vw] max-w-sm bg-white border-r border-slate-100 shadow-2xl md:hidden flex flex-col">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-black italic">M</div>
+                <span className="text-lg font-black text-slate-900">Mentoga</span>
+              </div>
+              <button onClick={() => setMobileMenuOpen(false)} className="px-3 py-2 rounded-xl bg-slate-50 text-slate-700 font-bold text-sm">Close</button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 custom-scrollbar">
+              <div className="space-y-1">{mainNav.map(item => <NavLink key={item.id} item={item} />)}</div>
+              <div className="h-px bg-slate-50 mx-4" />
+              <div className="space-y-1">{managementNav.map(item => <NavLink key={item.id} item={item} />)}</div>
+              <div className="h-px bg-slate-50 mx-4" />
+              <div className="space-y-1">{utilityNav.map(item => <NavLink key={item.id} item={item} />)}</div>
+            </div>
+            <div className="p-4 border-t border-slate-100">
+              <button onClick={onLogout} className="w-full py-3 rounded-2xl bg-red-50 text-red-600 font-bold text-sm">Sign Out</button>
+            </div>
+          </div>
+        </>
+      )}
+
+      <div className="hidden md:flex w-72 h-screen flex-col bg-white border-r border-slate-100 overflow-hidden shrink-0">
       {/* Brand Logo */}
       <div className="p-6">
         <div className="flex items-center gap-2">
@@ -168,6 +214,7 @@ export default function ConsultantSidebar({
         </button>
       </div>
 
-    </div>
+      </div>
+    </>
   );
 }

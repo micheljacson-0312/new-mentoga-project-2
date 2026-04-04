@@ -32,6 +32,8 @@ export default function ChatPage({
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [endingSession, setEndingSession] = useState(false);
+  const [sessionNotice, setSessionNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -176,7 +178,7 @@ export default function ChatPage({
       }, 1000);
     } catch (error) {
       console.error("Error accessing media:", error);
-      alert(`${type === 'audio' ? 'Microphone' : 'Camera'} access denied.`);
+      setSessionNotice({ type: "error", text: `${type === 'audio' ? 'Microphone' : 'Camera'} access denied.` });
     }
   };
 
@@ -207,19 +209,67 @@ export default function ChatPage({
       await sendMessage(undefined, type, publicUrl);
     } catch (error) {
       console.error("Error uploading media:", error);
-      alert("Failed to upload media. Please try again.");
+      setSessionNotice({ type: "error", text: "Failed to upload media. Please try again." });
     }
   };
 
+  const startBrowserCall = (mode: 'voice' | 'video') => {
+    const roomName = `mentoga-${conversationId}`;
+    const suffix = mode === 'voice' ? '#config.startWithVideoMuted=true&config.startAudioOnly=true' : '';
+    window.open(`https://meet.jit.si/${roomName}${suffix}`, '_blank', 'noopener,noreferrer');
+    setSessionNotice({ type: 'success', text: `${mode === 'voice' ? 'Voice' : 'Video'} call opened in a new tab.` });
+  };
+
   const handleEndSession = async () => {
+    const unbilledMessages = messages.filter((message) => !message.is_billed);
     const rate = consultant.chat_rate_per_minute || 0.1;
-    const amount = (sessionCount.messages * rate).toFixed(2);
-    const confirmed = confirm(`End chat session?\n\nMessages: ${sessionCount.messages}\nEstimated Total: $${amount}`);
-    if (confirmed) {
-       // Ideally, trigger a payment here or mark messages as billed
-       // For now, we'll just show the success state
-       alert(`Invoice generated for $${amount}. Session summary sent to your email.`);
-       onBack();
+    const amount = (unbilledMessages.length * rate).toFixed(2);
+
+    if (unbilledMessages.length === 0) {
+      setSessionNotice({ type: "success", text: "No unpaid messages left in this session." });
+      onBack();
+      return;
+    }
+
+    const confirmed = confirm(`End chat session?\n\nMessages: ${unbilledMessages.length}\nEstimated Total: $${amount}`);
+    if (!confirmed || !profile) return;
+
+    try {
+      setEndingSession(true);
+      setSessionNotice(null);
+
+      const { error: paymentError } = await supabase.from("payments").insert([
+        {
+          user_id: profile.id,
+          consultant_id: consultant.id,
+          amount: Number(amount),
+          currency: "USD",
+          status: "pending",
+          description: `Direct chat billing for ${unbilledMessages.length} messages`,
+        },
+      ]);
+
+      if (paymentError) throw paymentError;
+
+      const unbilledIds = unbilledMessages.map((message) => message.id);
+      const { error: updateError } = await supabase
+        .from("messages")
+        .update({ is_billed: true })
+        .in("id", unbilledIds);
+
+      if (updateError) throw updateError;
+
+      setMessages((current) => current.map((message) => (
+        unbilledIds.includes(message.id) ? { ...message, is_billed: true } : message
+      )));
+      setSessionCount({ chars: 0, messages: 0, audio: 0, video: 0 });
+      setSessionNotice({ type: "success", text: `Invoice generated for $${amount}. Unbilled messages were settled.` });
+      onBack();
+    } catch (error: any) {
+      console.error("Error ending chat session:", error);
+      setSessionNotice({ type: "error", text: error.message || "Could not close the session right now." });
+    } finally {
+      setEndingSession(false);
     }
   };
 
@@ -234,12 +284,12 @@ export default function ChatPage({
   return (
     <div className="flex flex-col h-screen bg-slate-50 overflow-hidden">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-sm z-10">
-        <div className="flex items-center gap-3">
+      <div className="bg-white border-b border-slate-200 px-3 sm:px-4 py-3 flex items-center justify-between gap-3 shadow-sm z-10">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
             <ChevronLeft className="w-6 h-6 text-slate-600" />
           </button>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <div className="w-10 h-10 bg-blue-50 rounded-full overflow-hidden flex items-center justify-center border border-slate-100">
                {consultant.user?.profile_image_url ? (
                   <img src={consultant.user.profile_image_url} alt="" className="w-full h-full object-cover" />
@@ -249,8 +299,8 @@ export default function ChatPage({
                   </span>
                )}
             </div>
-            <div>
-              <h2 className="font-bold text-slate-900 leading-tight">
+            <div className="min-w-0">
+              <h2 className="font-bold text-slate-900 leading-tight truncate">
                 {consultant.user?.first_name} {consultant.user?.last_name}
               </h2>
               <p className="text-xs text-green-500 font-medium flex items-center gap-1">
@@ -261,18 +311,28 @@ export default function ChatPage({
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
-          <button className="p-2 hover:bg-slate-100 rounded-full text-slate-400 cursor-not-allowed">
+        <div className="flex items-center gap-2 shrink-0">
+          <button onClick={() => startBrowserCall('voice')} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors">
             <Phone className="w-5 h-5" />
+          </button>
+          <button onClick={() => startBrowserCall('video')} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors">
+            <VideoIcon className="w-5 h-5" />
           </button>
           <button 
             onClick={handleEndSession}
-            className="ml-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100 transition-colors"
+            disabled={endingSession}
+            className="px-3 sm:px-4 py-2 bg-red-50 text-red-600 rounded-lg text-xs sm:text-sm font-bold hover:bg-red-100 transition-colors disabled:opacity-50"
           >
-            End Session
+            {endingSession ? "Closing..." : "End Session"}
           </button>
         </div>
       </div>
+
+      {sessionNotice && (
+        <div className={`mx-3 mt-3 sm:mx-4 rounded-2xl px-4 py-3 text-sm font-bold ${sessionNotice.type === "success" ? "bg-green-50 text-green-700 border border-green-100" : "bg-red-50 text-red-700 border border-red-100"}`}>
+          {sessionNotice.text}
+        </div>
+      )}
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -322,8 +382,8 @@ export default function ChatPage({
       </div>
 
       {/* Session Billing Tracker */}
-      <div className="bg-white border-t border-slate-200 px-4 py-1.5 flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-         <div className="flex gap-4">
+      <div className="bg-white border-t border-slate-200 px-3 sm:px-4 py-2 flex flex-col sm:flex-row justify-between gap-2 sm:items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+         <div className="flex gap-4 flex-wrap">
             <span>Messages: <span className="text-slate-900">{sessionCount.messages}</span></span>
             <span>Media: <span className="text-slate-900">{sessionCount.audio + sessionCount.video}</span></span>
          </div>
@@ -334,7 +394,7 @@ export default function ChatPage({
       </div>
 
       {/* Input Area */}
-      <div className="bg-white p-4 border-t border-slate-200">
+       <div className="bg-white p-3 sm:p-4 border-t border-slate-200">
         {(isRecordingAudio || isRecordingVideo) ? (
           <div className="flex items-center justify-between bg-red-50 p-4 rounded-2xl border border-red-100 animate-pulse">
             <div className="flex items-center gap-3 text-red-600">
@@ -382,7 +442,7 @@ export default function ChatPage({
             <button
               type="submit"
               disabled={!newMessage.trim()}
-              className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-100 disabled:opacity-50 hover:bg-blue-700 transition-all"
+              className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-100 disabled:opacity-50 hover:bg-blue-700 transition-all shrink-0"
             >
               <Send className="w-5 h-5" />
             </button>

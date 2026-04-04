@@ -38,6 +38,7 @@ export default function Marketplace({ initialSlug }: MarketplaceProps) {
   const [signInError, setSignInError] = useState("");
   const [signInLoading, setSignInLoading] = useState(false);
   const [expandedBio, setExpandedBio] = useState<{ name: string; bio: string } | null>(null);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   useEffect(() => {
     console.log("Creators mounted, calling fetchConsultants");
@@ -322,7 +323,7 @@ export default function Marketplace({ initialSlug }: MarketplaceProps) {
               setShowChat(true);
             } catch (error) {
               console.error("Error starting chat:", error);
-              alert("Could not start chat. Please try again.");
+              setActionNotice("Could not start chat. Please try again.");
             }
           }}
         />
@@ -334,18 +335,25 @@ export default function Marketplace({ initialSlug }: MarketplaceProps) {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       {signInModal}
       {expandedBioModal}
+      {actionNotice && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+          <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+            {actionNotice}
+          </div>
+        </div>
+      )}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-12">
-          <h1 className="text-4xl font-bold text-slate-900 mb-3">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 md:py-12">
+        <div className="mb-8 md:mb-12">
+          <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3">
             Find Your Creators
           </h1>
-          <p className="text-lg text-slate-600">
+          <p className="text-base sm:text-lg text-slate-600 max-w-2xl">
             Connect with expert creators for personalized guidance and mentorship
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-12">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-12">
           <div className="lg:col-span-3">
             <div className="relative">
               <Search className="absolute left-3 top-3.5 w-5 h-5 text-slate-400" />
@@ -359,7 +367,7 @@ export default function Marketplace({ initialSlug }: MarketplaceProps) {
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <Filter className="w-5 h-5 text-slate-600 mt-3" />
             <select
               value={sortBy}
@@ -417,15 +425,15 @@ export default function Marketplace({ initialSlug }: MarketplaceProps) {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
             {filteredConsultants.map((consultant) => (
               <div
                 key={consultant.id || consultant.user_id}
-                className="group bg-white rounded-[2.5rem] shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 border border-slate-100 overflow-hidden flex flex-col h-full"
+                className="group bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 border border-slate-100 overflow-hidden flex flex-col h-full"
               >
-                <div className="p-8 flex flex-col flex-1">
+                <div className="p-5 sm:p-6 md:p-8 flex flex-col flex-1">
                   {/* Header Section: Fixed Height */}
-                  <div className="flex items-start justify-between mb-6">
+                  <div className="flex items-start justify-between gap-3 mb-6">
                     <div className="flex-shrink-0">
                       <div className="w-16 h-16 bg-blue-50 rounded-2xl border-2 border-white shadow-sm flex items-center justify-center overflow-hidden transition-transform group-hover:scale-105 duration-500">
                         {consultant.user?.profile_image_url ? (
@@ -441,7 +449,7 @@ export default function Marketplace({ initialSlug }: MarketplaceProps) {
                         )}
                       </div>
                     </div>
-                    <div className="flex-grow ml-4">
+                     <div className="flex-grow min-w-0 ml-1 sm:ml-4">
                       <h3 className="font-black text-xl text-slate-900 leading-tight mb-1 line-clamp-1">
                         {consultant.user?.first_name}{" "}
                         {consultant.user?.last_name}

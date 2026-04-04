@@ -30,6 +30,7 @@ export default function UserDashboard() {
   });
   const [showSettings, setShowSettings] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [profileNotice, setProfileNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
@@ -95,11 +96,12 @@ export default function UserDashboard() {
     e.preventDefault();
     try {
       setSaving(true);
+      setProfileNotice(null);
       await updateProfile(formData);
       setShowSettings(false);
-      alert("Profile updated successfully!");
+      setProfileNotice({ type: "success", text: "Profile updated successfully!" });
     } catch (err: any) {
-      alert(err.message || "Failed to update profile");
+      setProfileNotice({ type: "error", text: err.message || "Failed to update profile" });
     } finally {
       setSaving(false);
     }
@@ -185,6 +187,11 @@ export default function UserDashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16 relative z-20 pb-20">
+        {profileNotice && (
+          <div className={`mb-6 rounded-[2rem] px-6 py-4 text-sm font-bold ${profileNotice.type === "success" ? "bg-green-50 text-green-700 border border-green-100" : "bg-red-50 text-red-700 border border-red-100"}`}>
+            {profileNotice.text}
+          </div>
+        )}
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
           {[

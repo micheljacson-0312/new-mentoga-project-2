@@ -12,6 +12,7 @@ export default function CourseLMS() {
   const [viewingCourse, setViewingCourse] = useState<Course | null>(null);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
   
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -58,6 +59,7 @@ export default function CourseLMS() {
     if (!profile?.id) return;
     try {
       setSaving(true);
+      setNotice(null);
       let thumbnailUrl = null;
       if (thumbnailFile) {
         thumbnailUrl = await uploadThumbnail(thumbnailFile);
@@ -69,9 +71,10 @@ export default function CourseLMS() {
       setFormData(emptyForm);
       setThumbnailFile(null);
       setShowCreateForm(false);
+      setNotice({ type: "success", text: "Course created successfully." });
       fetchCourses();
     } catch (error: any) {
-      alert(`Failed to create course: ${error.message}`);
+      setNotice({ type: "error", text: `Failed to create course: ${error.message}` });
     } finally {
       setSaving(false);
     }
@@ -81,6 +84,7 @@ export default function CourseLMS() {
     if (!editingCourse) return;
     setSaving(true);
     try {
+      setNotice(null);
       let thumbnailUrl = editForm.thumbnail_url;
       if (thumbnailFile) {
         thumbnailUrl = await uploadThumbnail(thumbnailFile);
@@ -102,9 +106,10 @@ export default function CourseLMS() {
       
       setEditingCourse(null);
       setThumbnailFile(null);
+      setNotice({ type: "success", text: "Course updated successfully." });
       fetchCourses();
     } catch (error: any) {
-      alert(`Failed to save: ${error.message}`);
+      setNotice({ type: "error", text: `Failed to save: ${error.message}` });
     } finally {
       setSaving(false);
     }
@@ -133,6 +138,11 @@ export default function CourseLMS() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {notice && (
+        <div className={`mb-6 rounded-2xl px-4 py-3 text-sm font-bold ${notice.type === "success" ? "bg-green-50 text-green-700 border border-green-100" : "bg-red-50 text-red-700 border border-red-100"}`}>
+          {notice.text}
+        </div>
+      )}
 
       {/* View Modal */}
       {viewingCourse && (
@@ -458,5 +468,4 @@ export default function CourseLMS() {
     </div>
   );
 }
-
 

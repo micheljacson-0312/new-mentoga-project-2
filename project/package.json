@@ -8,6 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "start": "node server.js",
+    "hostinger:build": "npm install && npm run build",
     "typecheck": "tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {

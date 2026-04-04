@@ -42,6 +42,7 @@ export default function Navigation({
   const [passLoading, setPassLoading] = useState(false);
   const [passError, setPassError] = useState("");
   const [passSuccess, setPassSuccess] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const { profile, signOut } = context!;
 
@@ -78,6 +79,11 @@ export default function Navigation({
     }
   };
 
+  const handleNavigate = (page: string) => {
+    setMobileMenuOpen(false);
+    onNavigate(page);
+  };
+
   return (
     <>
       {/* Mobile Header */}
@@ -97,15 +103,103 @@ export default function Navigation({
                    {profile.first_name?.[0]}
                 </div>
              )}
-             <button 
+             <button
                className="p-2 text-slate-400 hover:text-slate-600 bg-slate-50 rounded-xl"
-               onClick={() => {}} // Mobile menu toggle logic could go here
-             >
-               <Menu className="w-6 h-6" />
-             </button>
-          </div>
-        </div>
-      </nav>
+               onClick={() => setMobileMenuOpen((open) => !open)}
+              >
+                <Menu className="w-6 h-6" />
+              </button>
+           </div>
+         </div>
+       </nav>
+
+       {mobileMenuOpen && (
+         <>
+           <button
+             type="button"
+             aria-label="Close mobile menu"
+             className="fixed inset-0 z-40 bg-slate-900/40 md:hidden"
+             onClick={() => setMobileMenuOpen(false)}
+           />
+           <div className="fixed inset-x-3 top-20 bottom-3 z-50 rounded-[2rem] bg-white border border-slate-100 shadow-2xl overflow-hidden md:hidden">
+             <div className="h-full flex flex-col">
+               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                 <div>
+                   <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Menu</p>
+                   <p className="text-lg font-black text-slate-900">Mentoga</p>
+                 </div>
+                 <button
+                   onClick={() => setMobileMenuOpen(false)}
+                   className="p-2 rounded-xl bg-slate-50 text-slate-500"
+                 >
+                   <X className="w-5 h-5" />
+                 </button>
+               </div>
+               <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                 <div className="space-y-2">
+                   <button onClick={() => handleNavigate("marketplace")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold ${currentPage === "marketplace" ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-700"}`}>
+                     <Briefcase className="w-5 h-5" />
+                     Creators
+                   </button>
+                   <button onClick={() => handleNavigate("messages")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold ${currentPage === "messages" ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-700"}`}>
+                     <MessageSquare className="w-5 h-5" />
+                     Messages
+                   </button>
+                 </div>
+
+                 {profile && (
+                   <div className="space-y-2">
+                     {profile.role === "user" && (
+                       <>
+                         <button onClick={() => handleNavigate("emeetings")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold ${currentPage === "emeetings" ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-700"}`}><Headset className="w-5 h-5" />eMeetings</button>
+                         <button onClick={() => handleNavigate("megasessions")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold ${currentPage === "megasessions" ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-700"}`}><Users className="w-5 h-5" />MegaSessions</button>
+                         <button onClick={() => handleNavigate("recordings")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold ${currentPage === "recordings" ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-700"}`}><Clapperboard className="w-5 h-5" />Recordings</button>
+                         <button onClick={() => handleNavigate("wallet")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold ${currentPage === "wallet" ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-700"}`}><Wallet className="w-5 h-5" />Wallet</button>
+                         <button onClick={() => handleNavigate("resolution_center")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold ${currentPage === "resolution_center" ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-700"}`}><RotateCcw className="w-5 h-5" />Resolution Center</button>
+                         <button onClick={() => handleNavigate("memberships")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold ${currentPage === "memberships" ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-700"}`}><Gem className="w-5 h-5" />Memberships</button>
+                         <button onClick={() => handleNavigate("notifications")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold ${currentPage === "notifications" ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-700"}`}><Bell className="w-5 h-5" />Notifications</button>
+                         <button onClick={() => handleNavigate("edit_profile")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold ${currentPage === "edit_profile" ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-700"}`}><User className="w-5 h-5" />Edit Profile</button>
+                         <button onClick={() => handleNavigate("consultant")} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold bg-slate-900 text-white"><Repeat className="w-5 h-5" />Switch to Creator</button>
+                       </>
+                     )}
+                     {profile.role === "consultant" && (
+                       <button onClick={() => handleNavigate("consultant")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold ${currentPage === "consultant" ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-700"}`}><LayoutDashboard className="w-5 h-5" />Expert Dashboard</button>
+                     )}
+                     {profile.role === "admin" && (
+                       <>
+                         <button onClick={() => handleNavigate("admin")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold ${currentPage === "admin" ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-700"}`}><BarChart3 className="w-5 h-5" />Overview</button>
+                         <button onClick={() => handleNavigate("admin_users")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold ${currentPage === "admin_users" ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-700"}`}><Users className="w-5 h-5" />Users</button>
+                         <button onClick={() => handleNavigate("admin_consultants")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold ${currentPage === "admin_consultants" ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-700"}`}><UserCog className="w-5 h-5" />Consultants</button>
+                         <button onClick={() => handleNavigate("admin_payments")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold ${currentPage === "admin_payments" ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-700"}`}><DollarSign className="w-5 h-5" />Payments</button>
+                         <button onClick={() => handleNavigate("admin_settings")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold ${currentPage === "admin_settings" ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-700"}`}><Settings className="w-5 h-5" />Settings</button>
+                       </>
+                     )}
+                   </div>
+                 )}
+               </div>
+               <div className="p-4 border-t border-slate-100 bg-white">
+                 {profile ? (
+                   <div className="space-y-3">
+                     <div className="flex items-center gap-3 px-2">
+                       <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center text-slate-700 font-black">
+                         {profile.profile_image_url ? <img src={profile.profile_image_url} alt="Profile" className="w-full h-full object-cover" /> : profile.first_name?.[0]}
+                       </div>
+                       <div className="min-w-0">
+                         <p className="text-sm font-black text-slate-900 truncate">{profile.first_name} {profile.last_name}</p>
+                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{profile.role}</p>
+                       </div>
+                     </div>
+                     <button onClick={() => setShowPasswordModal(true)} className="w-full py-3 rounded-2xl bg-slate-50 text-slate-700 font-bold text-sm">Change Password</button>
+                     <button onClick={() => { setMobileMenuOpen(false); signOut(); }} className="w-full py-3 rounded-2xl bg-red-50 text-red-600 font-bold text-sm">Sign Out</button>
+                   </div>
+                 ) : (
+                   <button onClick={() => handleNavigate("login")} className="w-full py-3 rounded-2xl bg-blue-600 text-white font-bold text-sm">Sign In</button>
+                 )}
+               </div>
+             </div>
+           </div>
+         </>
+       )}
 
       {/* Change Password Modal */}
       {showPasswordModal && (

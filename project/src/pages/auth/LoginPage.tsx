@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Mail, Lock, AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
 import AuthLayout from "@/components/auth/AuthLayout";
+import { supabase } from "@/lib/supabase";
 
 interface LoginPageProps {
   onSwitchToSignup: () => void;
@@ -13,12 +14,15 @@ export default function LoginPage({ onSwitchToSignup, onBackToCreators }: LoginP
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [infoMessage, setInfoMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const { signIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setInfoMessage("");
     setLoading(true);
 
     try {
@@ -33,11 +37,35 @@ export default function LoginPage({ onSwitchToSignup, onBackToCreators }: LoginP
     }
   };
 
+  const handleForgotPassword = async () => {
+    setError("");
+    setInfoMessage("");
+
+    if (!email.trim()) {
+      setError("Please enter your email address first.");
+      return;
+    }
+
+    try {
+      setResetLoading(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: window.location.origin,
+      });
+
+      if (error) throw error;
+      setInfoMessage("Password reset email sent. Check your inbox.");
+    } catch (err: any) {
+      setError(err.message || "Could not send reset email. Please try again.");
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <AuthLayout>
-      <div className="space-y-6">
+      <div className="space-y-5 sm:space-y-6">
         <div className="text-center lg:text-left">
-          <h1 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">Sign In</h1>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2 tracking-tight">Sign In</h1>
           <p className="text-slate-500 font-bold text-sm">Sign in to your Mentoga account</p>
         </div>
 
@@ -45,6 +73,12 @@ export default function LoginPage({ onSwitchToSignup, onBackToCreators }: LoginP
           <div className="px-6 py-4 bg-red-50 border border-red-100 rounded-[2rem] flex items-center gap-3 text-red-600 text-sm font-bold animate-shake">
             <AlertCircle className="w-5 h-5 shrink-0" />
             <p>{error}</p>
+          </div>
+        )}
+
+        {infoMessage && (
+          <div className="px-6 py-4 bg-green-50 border border-green-100 rounded-[2rem] text-green-700 text-sm font-bold">
+            <p>{infoMessage}</p>
           </div>
         )}
 
@@ -63,8 +97,8 @@ export default function LoginPage({ onSwitchToSignup, onBackToCreators }: LoginP
                 required
               />
               <div className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-200">
-                  <div className="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center font-bold text-[10px]">i</div>
-               </div>
+                <div className="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center font-bold text-[10px]">i</div>
+              </div>
             </div>
 
             <div className="group relative">
@@ -79,7 +113,7 @@ export default function LoginPage({ onSwitchToSignup, onBackToCreators }: LoginP
                 placeholder="Password"
                 required
               />
-              <button 
+              <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600"
@@ -90,8 +124,13 @@ export default function LoginPage({ onSwitchToSignup, onBackToCreators }: LoginP
           </div>
 
           <div className="flex justify-end px-2">
-            <button type="button" className="text-sm font-black text-slate-900 border-b-2 border-transparent hover:border-blue-600 transition-all italic">
-              Forgot Password?
+            <button
+              type="button"
+              onClick={handleForgotPassword}
+              disabled={resetLoading}
+              className="text-sm font-black text-slate-900 border-b-2 border-transparent hover:border-blue-600 transition-all italic disabled:opacity-50"
+            >
+              {resetLoading ? "Sending..." : "Forgot Password?"}
             </button>
           </div>
 
@@ -113,24 +152,24 @@ export default function LoginPage({ onSwitchToSignup, onBackToCreators }: LoginP
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
-            {['google', 'facebook', 'apple'].map((platform) => (
-              <button key={platform} className="flex justify-center py-3 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100 transition-colors group">
-                <img 
-                  src={`https://www.vectorlogo.zone/logos/${platform}/${platform}-icon.svg`} 
-                  alt={platform} 
-                  className="w-5 h-5 grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100 transition-all"
-                />
-              </button>
-            ))}
-          </div>
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          {["google", "facebook", "apple"].map((platform) => (
+            <button key={platform} className="flex justify-center py-3 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100 transition-colors group">
+              <img
+                src={`https://www.vectorlogo.zone/logos/${platform}/${platform}-icon.svg`}
+                alt={platform}
+                className="w-5 h-5 grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100 transition-all"
+              />
+            </button>
+          ))}
+        </div>
 
         <div className="text-center space-y-4">
           <p className="text-slate-400 font-bold">Don't have an account?</p>
           <div className="flex flex-col items-center gap-4">
             <button
               onClick={onSwitchToSignup}
-              className="inline-flex items-center gap-2 bg-slate-900 text-white px-10 py-3 rounded-full font-black text-sm hover:bg-black transition-all active:scale-95 shadow-lg shadow-black/20"
+              className="inline-flex items-center gap-2 bg-slate-900 text-white px-8 sm:px-10 py-3 rounded-full font-black text-sm hover:bg-black transition-all active:scale-95 shadow-lg shadow-black/20"
             >
               Sign Up
             </button>
@@ -138,7 +177,7 @@ export default function LoginPage({ onSwitchToSignup, onBackToCreators }: LoginP
               <button
                 onClick={onBackToCreators}
                 className="text-xs font-bold text-slate-400 hover:text-blue-600 transition-colors"
-               >
+              >
                 ← Back to Creators
               </button>
             )}

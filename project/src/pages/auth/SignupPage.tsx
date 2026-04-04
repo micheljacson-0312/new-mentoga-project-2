@@ -114,13 +114,13 @@ export default function SignupPage({ onSwitchToLogin, onBackToCreators }: Signup
   if (step === 1) {
     return (
       <AuthLayout activeStep={1}>
-        <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-700">
+        <div className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-right-8 duration-700">
           <div className="text-center lg:text-left">
-            <h1 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">Create Account</h1>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2 tracking-tight">Create Account</h1>
             <p className="text-slate-500 font-bold text-sm">Join the Mentoga community today</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
              <button className="flex items-center justify-center gap-3 py-3 border-2 border-slate-50 rounded-xl hover:bg-slate-50 transition-all font-bold text-sm">
                 <img src="https://www.vectorlogo.zone/logos/google/google-icon.svg" className="w-5 h-5" alt="Google" />
                 Google
@@ -211,8 +211,8 @@ export default function SignupPage({ onSwitchToLogin, onBackToCreators }: Signup
     <AuthLayout activeStep={2}>
       <div className="space-y-4 animate-in fade-in slide-in-from-right-8 duration-700">
         <div className="text-center lg:text-left">
-          <h1 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">Almost There!</h1>
-          <p className="text-slate-500 font-bold text-sm truncate">Complete your profile for {email}</p>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2 tracking-tight">Almost There!</h1>
+          <p className="text-slate-500 font-bold text-sm break-all sm:break-normal">Complete your profile for {email}</p>
         </div>
 
         <form onSubmit={handleFinalSubmit} className="space-y-4">
@@ -268,12 +268,12 @@ export default function SignupPage({ onSwitchToLogin, onBackToCreators }: Signup
             )}
           </div>
 
-          <div className="bg-blue-50/50 p-6 rounded-[2rem] border-2 border-dashed border-blue-100">
+          <div className="bg-blue-50/50 p-4 sm:p-6 rounded-[2rem] border-2 border-dashed border-blue-100">
             <div className="text-center mb-4">
               <p className="text-xs font-black text-blue-600 uppercase tracking-widest mb-1">Verify Email</p>
               <p className="text-slate-400 text-[10px] font-bold">Enter the 4-digit code sent to your inbox</p>
             </div>
-            <div className="flex justify-center gap-2">
+            <div className="flex justify-center gap-2 sm:gap-3">
               {otp.map((digit, i) => (
                 <input
                   key={i}
@@ -283,7 +283,7 @@ export default function SignupPage({ onSwitchToLogin, onBackToCreators }: Signup
                   value={digit}
                   onChange={(e) => handleOtpChange(i, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(i, e)}
-                  className="w-12 h-14 bg-white border-2 border-blue-100 rounded-2xl text-center text-xl font-black text-blue-600 focus:border-blue-600 outline-none transition-all shadow-sm"
+                  className="w-11 sm:w-12 h-14 bg-white border-2 border-blue-100 rounded-2xl text-center text-xl font-black text-blue-600 focus:border-blue-600 outline-none transition-all shadow-sm"
                   placeholder="•"
                 />
               ))}

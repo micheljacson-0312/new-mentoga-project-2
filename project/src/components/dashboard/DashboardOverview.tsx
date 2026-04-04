@@ -44,6 +44,7 @@ export default function DashboardOverview({ consultant, profile }: DashboardOver
     unrepliedChats: 0,
     upcomingMeetings: 0
   });
+  const [copyNotice, setCopyNotice] = useState<string | null>(null);
 
   const profileUrl = consultant?.slug 
     ? `mentoga.com/${consultant.slug}` 
@@ -91,7 +92,8 @@ export default function DashboardOverview({ consultant, profile }: DashboardOver
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(profileUrl);
-    alert('Link copied to clipboard!');
+    setCopyNotice('Link copied to clipboard!');
+    window.setTimeout(() => setCopyNotice(null), 2000);
   };
 
   const steps = [
@@ -121,17 +123,18 @@ export default function DashboardOverview({ consultant, profile }: DashboardOver
           <p className="text-slate-500 font-medium">Here's what me happening with your profile today.</p>
         </div>
         
-        <div className="flex items-center gap-3 bg-white p-2 pl-4 rounded-2xl border border-slate-100 shadow-sm self-start">
-           <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
-           <span className="text-sm font-bold text-slate-600 truncate max-w-[200px]">{profileUrl}</span>
-           <button 
-             onClick={copyToClipboard}
+         <div className="flex items-center gap-3 bg-white p-2 pl-4 rounded-2xl border border-slate-100 shadow-sm self-start">
+            <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-sm font-bold text-slate-600 truncate max-w-[200px]">{profileUrl}</span>
+            <button 
+              onClick={copyToClipboard}
              className="p-2 hover:bg-slate-50 rounded-xl transition-colors text-slate-400 hover:text-blue-600"
             >
              <Copy className="w-4 h-4" />
-           </button>
-        </div>
-      </div>
+            </button>
+         </div>
+         {copyNotice && <p className="text-sm font-bold text-emerald-600">{copyNotice}</p>}
+       </div>
 
       {/* Growth Steps Stepper */}
       <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">

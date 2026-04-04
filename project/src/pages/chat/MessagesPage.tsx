@@ -16,6 +16,11 @@ export default function MessagesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
 
+  const goToMarketplace = () => {
+    localStorage.setItem("mentoga_currentPage", "marketplace");
+    window.location.assign("/");
+  };
+
   useEffect(() => {
     if (authLoading) return; // wait for auth to settle
     if (profile) {
@@ -77,7 +82,7 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto min-w-0">
       <div className="flex flex-col gap-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -124,11 +129,11 @@ export default function MessagesPage() {
                 <p className="text-slate-500 max-w-xs mx-auto mt-2">
                   Start a conversation with a creator to see it here.
                 </p>
-                <button 
-                   onClick={() => window.location.reload()} 
-                   className="mt-6 px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all text-sm"
-                >
-                  Explore Creators
+                 <button 
+                    onClick={goToMarketplace}
+                    className="mt-6 px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all text-sm"
+                 >
+                   Explore Creators
                 </button>
              </div>
           ) : (
@@ -149,7 +154,7 @@ export default function MessagesPage() {
                     <button
                       key={conv.id}
                       onClick={() => setSelectedConversation(conv)}
-                      className="w-full text-left p-4 hover:bg-slate-50 transition-colors flex items-center gap-4 group"
+                       className="w-full text-left p-4 hover:bg-slate-50 transition-colors flex items-center gap-3 sm:gap-4 group"
                     >
                       <div className="relative">
                         <div className="w-14 h-14 bg-blue-50 rounded-full overflow-hidden flex items-center justify-center border-2 border-slate-100">
@@ -164,15 +169,15 @@ export default function MessagesPage() {
                         <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full"></span>
                       </div>
                       
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-baseline mb-1">
-                          <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                            {other.first_name} {other.last_name}
-                          </h3>
-                          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tighter">
-                            {lastUpdate}
-                          </span>
-                        </div>
+                       <div className="flex-1 min-w-0">
+                         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-baseline gap-1 mb-1">
+                           <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+                             {other.first_name} {other.last_name}
+                           </h3>
+                           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tighter shrink-0">
+                             {lastUpdate}
+                           </span>
+                         </div>
                         <div className="flex items-center gap-2">
                            <p className="text-sm text-slate-500 truncate flex-1">
                              Click to view chat history and start messaging...

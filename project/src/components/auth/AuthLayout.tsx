@@ -155,9 +155,9 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
       </div>
 
       {/* Right Column: Auth Form (50%) */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-12 bg-white relative overflow-y-auto">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 pt-24 sm:p-6 sm:pt-24 lg:p-12 bg-white relative overflow-y-auto">
         {/* Small Logo for Mobile */}
-        <div className="lg:hidden absolute top-8 left-8 flex items-center gap-2">
+        <div className="lg:hidden absolute top-5 left-4 sm:top-8 sm:left-8 flex items-center gap-2">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-black italic">M</div>
           <span className="text-xl font-black text-slate-900">Mentoga</span>
         </div>

@@ -11,7 +11,6 @@ import {
 // New Dashboard Components
 import ConsultantSidebar from "@/components/dashboard/ConsultantSidebar";
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
-import ScheduleManager from "@/components/dashboard/ScheduleManager";
 import PricingManager from "@/components/dashboard/PricingManager";
 import ReviewManager from "@/components/dashboard/ReviewManager";
 import RecordingManager from "@/components/dashboard/RecordingManager";
@@ -23,6 +22,9 @@ import MegaSessionManager from "@/components/dashboard/MegaSessionManager";
 import MessagesPage from "@/pages/chat/MessagesPage";
 import ProfileEditor from "@/components/dashboard/ProfileEditor";
 import ConsultantProfile from "@/pages/marketplace/ConsultantProfile";
+import AvailabilityManager from "@/pages/dashboard/AvailabilityManager";
+import EarningsDashboard from "@/pages/dashboard/EarningsDashboard";
+import ConsultantUtilityPage from "@/components/dashboard/ConsultantUtilityPage";
 
 interface ConsultantDashboardProps {
   onNavigate?: (page: string) => void;
@@ -34,6 +36,7 @@ export default function ConsultantDashboard({ onNavigate: globalNavigate }: Cons
   const [activePage, setActivePage] = useState("dashboard");
   const [loading, setLoading] = useState(true);
   const [isBecomingConsultant, setIsBecomingConsultant] = useState(false);
+  const [setupNotice, setSetupNotice] = useState<string | null>(null);
 
   const handleNavigation = (page: string) => {
     // These pages are global redirections handled by App.tsx
@@ -97,6 +100,22 @@ export default function ConsultantDashboard({ onNavigate: globalNavigate }: Cons
     }
   };
 
+  const openLiveProfile = () => {
+    localStorage.setItem("mentoga_currentPage", "marketplace");
+
+    if (consultant?.slug) {
+      window.location.assign(`/c/${consultant.slug}`);
+      return;
+    }
+
+    if (globalNavigate) {
+      globalNavigate("marketplace");
+      return;
+    }
+
+    window.location.assign("/");
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-white">
@@ -123,11 +142,12 @@ export default function ConsultantDashboard({ onNavigate: globalNavigate }: Cons
             onClick={async () => {
               try {
                 setIsBecomingConsultant(true);
+                setSetupNotice(null);
                 await becomeConsultant();
                 await fetchConsultantData();
               } catch (err) {
                 console.error("Failed to become consultant:", err);
-                alert("Could not set up consultant profile. Make sure you are logged in.");
+                setSetupNotice("Could not set up consultant profile. Make sure you are logged in.");
               } finally {
                 setIsBecomingConsultant(false);
               }
@@ -138,6 +158,7 @@ export default function ConsultantDashboard({ onNavigate: globalNavigate }: Cons
             {isBecomingConsultant ? "Working Magic..." : "Get Started Now"}
             <ChevronRight className="w-5 h-5" />
           </button>
+          {setupNotice && <p className="mt-4 text-sm font-bold text-red-600">{setupNotice}</p>}
         </div>
       </div>
     );
@@ -148,9 +169,11 @@ export default function ConsultantDashboard({ onNavigate: globalNavigate }: Cons
       case 'dashboard':
         return <DashboardOverview consultant={consultant} profile={profile as any} />;
       case 'schedule':
-        return <ScheduleManager />;
+        return <AvailabilityManager />;
       case 'pricing':
         return <PricingManager />;
+      case 'emeetings':
+        return <ConsultantUtilityPage page="emeetings" />;
       case 'reviews':
         return <ReviewManager />;
       case 'recordings':
@@ -163,8 +186,22 @@ export default function ConsultantDashboard({ onNavigate: globalNavigate }: Cons
         return <CoursesManager />;
       case 'membership':
         return <MembershipManager />;
+      case 'packages':
+        return <MembershipManager />;
       case 'megasession':
         return <MegaSessionManager />;
+      case 'megasession_meetings':
+        return <ConsultantUtilityPage page="megasession_meetings" />;
+      case 'resolution_center':
+        return <ConsultantUtilityPage page="resolution_center" />;
+      case 'intro_video':
+        return <ConsultantUtilityPage page="intro_video" />;
+      case 'connected_accounts':
+        return <ConsultantUtilityPage page="connected_accounts" />;
+      case 'notifications':
+        return <ConsultantUtilityPage page="notifications" />;
+      case 'earnings':
+        return <EarningsDashboard />;
       case 'chats':
         return (
           <div className="max-w-6xl mx-auto py-4">
@@ -203,12 +240,12 @@ export default function ConsultantDashboard({ onNavigate: globalNavigate }: Cons
             <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden transform scale-[0.98]">
                {consultant && (
                  <ConsultantProfile 
-                  consultantId={profile?.id || ""}
-                  onBack={() => setActivePage("dashboard")}
-                  onBookSession={() => {}} 
-                  onStartChat={() => {}}
-                 />
-               )}
+                   consultantId={profile?.id || ""}
+                   onBack={() => setActivePage("dashboard")}
+                   onBookSession={openLiveProfile}
+                   onStartChat={openLiveProfile}
+                  />
+                )}
             </div>
           </div>
         );
@@ -226,7 +263,7 @@ export default function ConsultantDashboard({ onNavigate: globalNavigate }: Cons
   };
 
   return (
-    <div className="flex h-screen bg-[#fafbfc] overflow-hidden">
+    <div className="min-h-screen md:h-screen flex flex-col md:flex-row bg-[#fafbfc] overflow-visible md:overflow-hidden">
       <ConsultantSidebar 
         activePage={activePage}
         onNavigate={handleNavigation}
@@ -234,7 +271,7 @@ export default function ConsultantDashboard({ onNavigate: globalNavigate }: Cons
         onLogout={signOut}
       />
       
-      <main className="flex-1 overflow-y-auto p-8 relative">
+      <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-8 relative min-w-0">
         <div className="max-w-7xl mx-auto">
           {renderContent()}
         </div>
