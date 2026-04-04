@@ -40,6 +40,10 @@ export default function Marketplace({ initialSlug }: MarketplaceProps) {
   const [expandedBio, setExpandedBio] = useState<{ name: string; bio: string } | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
+  const resolveConsultantProfileId = (consultant: ConsultantWithProfile) => {
+    return consultant.user_id || consultant.user?.id || consultant.id;
+  };
+
   useEffect(() => {
     console.log("Creators mounted, calling fetchConsultants");
     fetchConsultants();
@@ -263,6 +267,11 @@ export default function Marketplace({ initialSlug }: MarketplaceProps) {
     return (
       <>
         {signInModal}
+        {actionNotice && (
+          <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[120] w-[calc(100%-2rem)] max-w-xl rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-700 shadow-lg">
+            {actionNotice}
+          </div>
+        )}
         <BookingPage
           consultant={selectedConsultant}
           serviceType={serviceType}
@@ -280,8 +289,13 @@ export default function Marketplace({ initialSlug }: MarketplaceProps) {
     return (
       <>
         {signInModal}
+        {actionNotice && (
+          <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[120] w-[calc(100%-2rem)] max-w-xl rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-700 shadow-lg">
+            {actionNotice}
+          </div>
+        )}
         <ConsultantProfile
-          consultantId={selectedConsultant.user_id || selectedConsultant.id}
+          consultantId={resolveConsultantProfileId(selectedConsultant)}
           onBack={() => setSelectedConsultant(null)}
           onBookSession={(consultant, serviceType) => {
             setSelectedConsultant(consultant);
@@ -295,11 +309,18 @@ export default function Marketplace({ initialSlug }: MarketplaceProps) {
             }
 
             try {
+              setActionNotice(null);
+              const consultantProfileId = resolveConsultantProfileId(consultant);
+
+              if (!consultantProfileId) {
+                throw new Error("Consultant profile not available for chat.");
+              }
+
               // Check if conversation exists
               const { data: existing } = await supabase
                 .from("conversations")
                 .select("id")
-                .or(`and(client_id.eq.${profile.id},consultant_id.eq.${consultant.user_id}),and(client_id.eq.${consultant.user_id},consultant_id.eq.${profile.id})`)
+                .or(`and(client_id.eq.${profile.id},consultant_id.eq.${consultantProfileId}),and(client_id.eq.${consultantProfileId},consultant_id.eq.${profile.id})`)
                 .maybeSingle();
 
               if (existing) {
@@ -311,7 +332,7 @@ export default function Marketplace({ initialSlug }: MarketplaceProps) {
                   .insert([
                     {
                       client_id: profile.id,
-                      consultant_id: consultant.user_id,
+                      consultant_id: consultantProfileId,
                     },
                   ])
                   .select()
@@ -321,9 +342,9 @@ export default function Marketplace({ initialSlug }: MarketplaceProps) {
                 setActiveConversationId(newConv.id);
               }
               setShowChat(true);
-            } catch (error) {
+            } catch (error: any) {
               console.error("Error starting chat:", error);
-              setActionNotice("Could not start chat. Please try again.");
+              setActionNotice(error?.message || "Could not start chat. Please try again.");
             }
           }}
         />
