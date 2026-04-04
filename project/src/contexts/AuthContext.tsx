@@ -43,54 +43,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const applySession = async (nextSession: Session | null) => {
+    setSession(nextSession);
+
+    if (!nextSession) {
+      setUser(null);
+      setProfile(null);
+      return;
+    }
+
+    setUser(nextSession.user as AuthUser);
+    await fetchProfile(nextSession.user.id);
+  };
+
   useEffect(() => {
     let mounted = true;
-    const timeout = setTimeout(() => {
-      if (mounted) setLoading(false);
-    }, 6000);
 
     const init = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
         if (!mounted) return;
-        
-        if (session) {
-          setSession(session);
-          setUser(session.user as AuthUser);
-          await fetchProfile(session.user.id);
-        }
+
+        await applySession(session);
       } catch (err) {
         console.error("Init Auth error:", err);
       } finally {
         if (mounted) {
           setLoading(false);
-          clearTimeout(timeout);
         }
       }
     };
-
-    init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("Auth state changed:", event);
         if (!mounted) return;
 
-        setSession(session);
-        if (session) {
-          setUser(session.user as AuthUser);
-          await fetchProfile(session.user.id);
-        } else {
-          setUser(null);
-          setProfile(null);
+        if (event === "SIGNED_OUT") {
+          await applySession(null);
+          setLoading(false);
+          return;
         }
+
+        await applySession(session);
         setLoading(false);
       }
     );
 
+    init();
+
     return () => {
       mounted = false;
-      clearTimeout(timeout);
       subscription?.unsubscribe();
     };
   }, []);

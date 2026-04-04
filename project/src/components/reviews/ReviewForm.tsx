@@ -17,6 +17,23 @@ export default function ReviewForm({ consultantId, bookingId, onSuccess, onCance
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  const resolveEligibleBookingId = async (profileId: string) => {
+    if (bookingId) return bookingId;
+
+    const { data, error } = await supabase
+      .from('bookings')
+      .select('id')
+      .eq('user_id', profileId)
+      .eq('consultant_id', consultantId)
+      .eq('status', 'completed')
+      .order('scheduled_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data?.id || null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (rating === 0) {
@@ -31,12 +48,26 @@ export default function ReviewForm({ consultantId, bookingId, onSuccess, onCance
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('You must be signed in to leave a review');
 
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('auth_id', user.id)
+        .maybeSingle();
+
+      if (profileError) throw profileError;
+      if (!profile?.id) throw new Error('Your profile could not be found');
+
+      const resolvedBookingId = await resolveEligibleBookingId(profile.id);
+      if (!resolvedBookingId) {
+        throw new Error('You can only review a mentor after a completed booking');
+      }
+
       const { error: submitError } = await supabase
         .from('reviews')
         .insert([{
           consultant_id: consultantId,
-          user_id: user.id,
-          booking_id: bookingId,
+          user_id: profile.id,
+          booking_id: resolvedBookingId,
           rating,
           comment
         }]);
