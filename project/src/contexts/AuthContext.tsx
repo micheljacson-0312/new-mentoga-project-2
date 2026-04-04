@@ -229,8 +229,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .filter((key) => key.startsWith("sb-") || key.includes("supabase"))
         .forEach((key) => sessionStorage.removeItem(key));
 
-      const { error } = await supabase.auth.signOut({ scope: "local" });
-      if (error) throw error;
+      supabase.auth.signOut({ scope: "local" }).catch((error) => {
+        console.error("Deferred sign out error:", error);
+      });
     } catch (error) {
       console.error("Sign out error:", error);
     }

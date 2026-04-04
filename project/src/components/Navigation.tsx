@@ -84,9 +84,9 @@ export default function Navigation({
     onNavigate(page);
   };
 
-  const handleSignOut = async () => {
+  const handleSignOut = () => {
     setMobileMenuOpen(false);
-    await signOut();
+    signOut();
     onNavigate("marketplace");
     window.history.replaceState({}, "", "/");
   };
