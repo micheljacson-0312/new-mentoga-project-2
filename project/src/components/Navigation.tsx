@@ -84,6 +84,13 @@ export default function Navigation({
     onNavigate(page);
   };
 
+  const handleSignOut = async () => {
+    setMobileMenuOpen(false);
+    await signOut();
+    onNavigate("marketplace");
+    window.history.replaceState({}, "", "/");
+  };
+
   return (
     <>
       {/* Mobile Header */}
@@ -190,7 +197,7 @@ export default function Navigation({
                        </div>
                      </div>
                      <button onClick={() => setShowPasswordModal(true)} className="w-full py-3 rounded-2xl bg-slate-50 text-slate-700 font-bold text-sm">Change Password</button>
-                     <button onClick={() => { setMobileMenuOpen(false); signOut(); }} className="w-full py-3 rounded-2xl bg-red-50 text-red-600 font-bold text-sm">Sign Out</button>
+                      <button onClick={handleSignOut} className="w-full py-3 rounded-2xl bg-red-50 text-red-600 font-bold text-sm">Sign Out</button>
                    </div>
                  ) : (
                    <button onClick={() => handleNavigate("login")} className="w-full py-3 rounded-2xl bg-blue-600 text-white font-bold text-sm">Sign In</button>
@@ -518,7 +525,7 @@ export default function Navigation({
         <div className="p-4 border-t border-slate-50 bg-white relative">
           {profile ? (
             <button 
-              onClick={() => signOut()}
+              onClick={handleSignOut}
               className="w-full flex items-center gap-3 p-3 hover:bg-red-50 rounded-2xl transition-all group border border-transparent hover:border-red-100"
             >
               <div className="w-10 h-10 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shadow-sm flex items-center justify-center">

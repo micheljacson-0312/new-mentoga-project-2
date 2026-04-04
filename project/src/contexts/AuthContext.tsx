@@ -208,15 +208,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      // Clear UI state immediately so user sees the change instantly
+      // Clear UI state immediately so the app can return to public pages without waiting.
       setUser(null);
       setProfile(null);
-      
-      const { error } = await supabase.auth.signOut();
+      setSession(null);
+      setLoading(false);
+
+      localStorage.removeItem("mentoga_currentPage");
+      localStorage.removeItem("mentoga-auth");
+
+      Object.keys(localStorage)
+        .filter((key) => key.startsWith("sb-") || key.includes("supabase"))
+        .forEach((key) => localStorage.removeItem(key));
+
+      Object.keys(sessionStorage)
+        .filter((key) => key.startsWith("sb-") || key.includes("supabase"))
+        .forEach((key) => sessionStorage.removeItem(key));
+
+      const { error } = await supabase.auth.signOut({ scope: "local" });
       if (error) throw error;
     } catch (error) {
       console.error("Sign out error:", error);
-      // Don't throw to avoid breaking out of other logic, just log it
     }
   };
 
