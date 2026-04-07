@@ -32,6 +32,7 @@ export default function BookingPage({
   const [enabledProviders, setEnabledProviders] = useState<Array<{ provider: string; display_name: string | null }>>([]);
   const [selectedProvider, setSelectedProvider] = useState("manual");
   const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
+  const [easypaisaMobile, setEasypaisaMobile] = useState("");
 
   useEffect(() => {
     const fetchSlots = async () => {
@@ -135,6 +136,12 @@ export default function BookingPage({
       return;
     }
 
+    if (selectedProvider === "easypaisa" && !/^03\d{9}$/.test(easypaisaMobile)) {
+      setError("Please enter a valid EasyPaisa mobile number (03XXXXXXXXX)");
+      setLoading(false);
+      return;
+    }
+
     try {
       const amount = parseFloat(calculateAmount());
 
@@ -170,6 +177,7 @@ export default function BookingPage({
             consultantId: consultant.user?.id || consultant.id,
             userId: profile.id,
             email: profile.email,
+            mobileNumber: selectedProvider === "easypaisa" ? easypaisaMobile : undefined,
             successUrl,
             cancelUrl,
           },
@@ -417,6 +425,20 @@ export default function BookingPage({
                       Manual / Offline
                     </button>
                   </div>
+                </div>
+              )}
+
+              {selectedProvider === "easypaisa" && (
+                <div className="space-y-2 border-b border-slate-100 pb-3 mb-3">
+                  <label className="block text-sm font-semibold text-slate-900">EasyPaisa Mobile Number</label>
+                  <input
+                    type="tel"
+                    value={easypaisaMobile}
+                    onChange={(e) => setEasypaisaMobile(e.target.value.replace(/\D/g, "").slice(0, 11))}
+                    placeholder="03XXXXXXXXX"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  />
+                  <p className="text-xs text-slate-500">Enter the 11-digit mobile number linked to your EasyPaisa account.</p>
                 </div>
               )}
 

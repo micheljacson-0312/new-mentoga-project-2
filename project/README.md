@@ -144,3 +144,26 @@ supabase functions deploy payfast-webhook
 Note:
 - Stripe is wired end-to-end.
 - Easypaisa, JazzCash, and PayFast admin/config scaffolds are ready, but their final signed checkout payloads still depend on your merchant account formats and secrets.
+
+### Easypaisa
+
+The current project now supports the provided EasyPaisa Mobile Account flow server-side.
+
+Required secrets:
+
+```bash
+supabase secrets set EASYPAISA_STORE_ID=your_store_id EASYPAISA_API_KEY=your_credentials_key
+```
+
+Deploy function:
+
+```bash
+supabase functions deploy easypaisa-create-payment
+supabase functions deploy easypaisa-webhook
+```
+
+Frontend behavior:
+- user selects `Easypaisa` during booking
+- user enters `03XXXXXXXXX` mobile number
+- edge function submits `initiate-ma-transaction`
+- on success booking becomes `confirmed` and payment becomes `completed`
