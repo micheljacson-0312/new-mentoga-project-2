@@ -91,9 +91,13 @@ export type Database = {
         Row: {
           id: string;
           provider: string;
+          display_name: string | null;
           is_enabled: boolean;
           is_test_mode: boolean;
           publishable_key: string | null;
+          public_key_label: string | null;
+          integration_notes: string | null;
+          metadata: Record<string, unknown> | null;
           webhook_endpoint: string | null;
           webhook_last_verified_at: string | null;
           created_at: string;

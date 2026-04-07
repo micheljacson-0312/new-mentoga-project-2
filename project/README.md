@@ -116,3 +116,31 @@ Recommended architecture:
 - `Secret key`: Supabase Edge Function secret
 - `Webhook secret`: Supabase Edge Function secret
 - `Webhook confirmation`: handled by `stripe-webhook` and reflected in admin settings
+
+## Additional Gateways
+
+The admin panel now supports configuration rows for:
+- `Easypaisa`
+- `JazzCash`
+- `PayFast`
+
+Recommended architecture for all three:
+- Save only non-secret identifiers in `payment_provider_settings`
+- Store merchant passwords, salts, passphrases, and hash keys in Supabase secrets
+- Build signed redirect or server-to-server requests in Edge Functions
+- Use provider-specific webhook functions for payment confirmation
+
+Scaffolded functions are included for:
+
+```bash
+supabase functions deploy easypaisa-create-payment
+supabase functions deploy easypaisa-webhook
+supabase functions deploy jazzcash-create-payment
+supabase functions deploy jazzcash-webhook
+supabase functions deploy payfast-create-payment
+supabase functions deploy payfast-webhook
+```
+
+Note:
+- Stripe is wired end-to-end.
+- Easypaisa, JazzCash, and PayFast admin/config scaffolds are ready, but their final signed checkout payloads still depend on your merchant account formats and secrets.

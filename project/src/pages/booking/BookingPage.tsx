@@ -29,7 +29,8 @@ export default function BookingPage({
   const [dbSlots, setDbSlots] = useState<any[]>([]);
   const [generatedTimes, setGeneratedTimes] = useState<string[]>([]);
   const [fetchingSlots, setFetchingSlots] = useState(false);
-  const [stripeEnabled, setStripeEnabled] = useState(false);
+  const [enabledProviders, setEnabledProviders] = useState<Array<{ provider: string; display_name: string | null }>>([]);
+  const [selectedProvider, setSelectedProvider] = useState("manual");
   const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -50,11 +51,13 @@ export default function BookingPage({
     const fetchPaymentSettings = async () => {
       const { data } = await supabase
         .from("payment_provider_settings")
-        .select("is_enabled")
-        .eq("provider", "stripe")
-        .maybeSingle();
+        .select("provider, display_name")
+        .eq("is_enabled", true)
+        .order("provider", { ascending: true });
 
-      setStripeEnabled(!!data?.is_enabled);
+      const providers = (data || []) as Array<{ provider: string; display_name: string | null }>;
+      setEnabledProviders(providers);
+      setSelectedProvider(providers[0]?.provider || "manual");
     };
 
     fetchPaymentSettings();
@@ -154,11 +157,11 @@ export default function BookingPage({
 
       if (bookingError) throw bookingError;
 
-      if (stripeEnabled) {
+      if (selectedProvider !== "manual") {
         const successUrl = `${window.location.origin}/?checkout=success&booking=${booking.id}`;
         const cancelUrl = `${window.location.origin}/?checkout=cancel&booking=${booking.id}`;
 
-        const { data: stripeCheckout, error: stripeError } = await supabase.functions.invoke("stripe-create-payment", {
+        const { data: providerCheckout, error: providerError } = await supabase.functions.invoke(`${selectedProvider}-create-payment`, {
           body: {
             amount,
             currency: "USD",
@@ -172,12 +175,12 @@ export default function BookingPage({
           },
         });
 
-        if (stripeError || !stripeCheckout?.checkoutUrl) {
+        if (providerError || !providerCheckout?.checkoutUrl) {
           await supabase.from("bookings").delete().eq("id", booking.id);
-          throw new Error(stripeError?.message || stripeCheckout?.error || "Could not start Stripe checkout");
+          throw new Error(providerError?.message || providerCheckout?.error || `Could not start ${selectedProvider} checkout`);
         }
 
-        window.location.assign(stripeCheckout.checkoutUrl);
+        window.location.assign(providerCheckout.checkoutUrl);
         return;
       }
 
@@ -227,7 +230,7 @@ export default function BookingPage({
       }
 
       onSuccess();
-      setPaymentNotice(stripeEnabled ? null : "Booking requested. Payment is pending admin processing.");
+      setPaymentNotice(selectedProvider === "manual" ? "Booking requested. Payment is pending admin processing." : null);
     } catch (err: any) {
       setError(
         err.message || "Failed to create booking. Please try again."
@@ -392,6 +395,31 @@ export default function BookingPage({
             </div>
 
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-3">
+              {enabledProviders.length > 0 && (
+                <div className="border-b border-slate-100 pb-3 mb-3 space-y-2">
+                  <label className="block text-sm font-semibold text-slate-900">Payment Method</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {enabledProviders.map((provider) => (
+                      <button
+                        key={provider.provider}
+                        type="button"
+                        onClick={() => setSelectedProvider(provider.provider)}
+                        className={`px-4 py-3 rounded-xl border text-sm font-bold transition-colors ${selectedProvider === provider.provider ? "border-blue-600 bg-blue-50 text-blue-700" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}
+                      >
+                        {provider.display_name || provider.provider}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProvider("manual")}
+                      className={`px-4 py-3 rounded-xl border text-sm font-bold transition-colors ${selectedProvider === "manual" ? "border-blue-600 bg-blue-50 text-blue-700" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}
+                    >
+                      Manual / Offline
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-between items-center text-sm">
                 <span className="text-slate-600">Rate ({duration} mins)</span>
                 <span className="font-medium text-slate-900">${getRate().toFixed(2)}</span>
@@ -402,7 +430,7 @@ export default function BookingPage({
               </div>
               <div className="text-xs text-slate-500 flex items-center gap-1.5 pt-1">
                 <AlertCircle className="w-3.5 h-3.5" />
-                {stripeEnabled ? "You will be redirected to secure Stripe checkout" : "Stripe is disabled, so this will create a pending manual payment"}
+                {selectedProvider === "manual" ? "This will create a pending manual payment" : `You will be redirected to secure ${enabledProviders.find((provider) => provider.provider === selectedProvider)?.display_name || selectedProvider} checkout`}
               </div>
             </div>
 
@@ -412,7 +440,7 @@ export default function BookingPage({
               className="w-full bg-slate-900 hover:bg-black disabled:bg-slate-300 disabled:text-slate-500 text-white font-semibold py-4 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg disabled:shadow-none"
             >
               {loading && <Loader className="w-5 h-5 animate-spin" />}
-              {loading ? "Processing Booking..." : stripeEnabled ? "Continue to Stripe Checkout" : "Confirm & Request Booking"}
+              {loading ? "Processing Booking..." : selectedProvider === "manual" ? "Confirm & Request Booking" : `Continue to ${enabledProviders.find((provider) => provider.provider === selectedProvider)?.display_name || "Checkout"}`}
             </button>
           </form>
         </div>
