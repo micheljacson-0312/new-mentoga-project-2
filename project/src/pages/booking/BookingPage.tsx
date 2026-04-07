@@ -33,6 +33,13 @@ export default function BookingPage({
   const [selectedProvider, setSelectedProvider] = useState("manual");
   const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
   const [easypaisaMobile, setEasypaisaMobile] = useState("");
+  const [jazzcashMobile, setJazzcashMobile] = useState("");
+  const [payfastMobile, setPayfastMobile] = useState("");
+  const [payfastCnic, setPayfastCnic] = useState("");
+  const [payfastAccountNumber, setPayfastAccountNumber] = useState("");
+  const [payfastBankCode, setPayfastBankCode] = useState("");
+  const [payfastOtp, setPayfastOtp] = useState("");
+  const [payfastTransactionId, setPayfastTransactionId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchSlots = async () => {
@@ -142,6 +149,26 @@ export default function BookingPage({
       return;
     }
 
+    if (selectedProvider === "jazzcash" && !/^03\d{9}$/.test(jazzcashMobile)) {
+      setError("Please enter a valid JazzCash mobile number (03XXXXXXXXX)");
+      setLoading(false);
+      return;
+    }
+
+    if (selectedProvider === "payfast") {
+      if (!/^03\d{9}$/.test(payfastMobile)) {
+        setError("Please enter a valid PayFast mobile number (03XXXXXXXXX)");
+        setLoading(false);
+        return;
+      }
+
+      if (!payfastCnic || !payfastAccountNumber || !payfastBankCode) {
+        setError("Please fill PayFast bank code, account number, and CNIC");
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       const amount = parseFloat(calculateAmount());
 
@@ -177,11 +204,24 @@ export default function BookingPage({
             consultantId: consultant.user?.id || consultant.id,
             userId: profile.id,
             email: profile.email,
-            mobileNumber: selectedProvider === "easypaisa" ? easypaisaMobile : undefined,
+            mobileNumber: selectedProvider === "easypaisa" ? easypaisaMobile : selectedProvider === "jazzcash" ? jazzcashMobile : selectedProvider === "payfast" ? payfastMobile : undefined,
+            cnicNumber: selectedProvider === "payfast" ? payfastCnic : undefined,
+            accountNumber: selectedProvider === "payfast" ? payfastAccountNumber : undefined,
+            bankCode: selectedProvider === "payfast" ? payfastBankCode : undefined,
+            otp: selectedProvider === "payfast" && payfastTransactionId ? payfastOtp : undefined,
+            transactionId: selectedProvider === "payfast" ? payfastTransactionId || undefined : undefined,
+            step: selectedProvider === "payfast" ? (payfastTransactionId ? "confirm" : "validate") : undefined,
             successUrl,
             cancelUrl,
           },
         });
+
+        if (selectedProvider === "payfast" && providerCheckout?.requiresOtp && providerCheckout?.transactionId) {
+          setPayfastTransactionId(providerCheckout.transactionId);
+          setPaymentNotice(providerCheckout.message || "OTP sent. Enter OTP to complete PayFast payment.");
+          setLoading(false);
+          return;
+        }
 
         if (providerError || !providerCheckout?.checkoutUrl) {
           await supabase.from("bookings").delete().eq("id", booking.id);
@@ -442,6 +482,78 @@ export default function BookingPage({
                 </div>
               )}
 
+              {selectedProvider === "jazzcash" && (
+                <div className="space-y-2 border-b border-slate-100 pb-3 mb-3">
+                  <label className="block text-sm font-semibold text-slate-900">JazzCash Mobile Number</label>
+                  <input
+                    type="tel"
+                    value={jazzcashMobile}
+                    onChange={(e) => setJazzcashMobile(e.target.value.replace(/\D/g, "").slice(0, 11))}
+                    placeholder="03XXXXXXXXX"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  />
+                  <p className="text-xs text-slate-500">Enter the 11-digit mobile number linked to your JazzCash account.</p>
+                </div>
+              )}
+
+              {selectedProvider === "payfast" && (
+                <div className="space-y-3 border-b border-slate-100 pb-3 mb-3">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">PayFast Mobile Number</label>
+                    <input
+                      type="tel"
+                      value={payfastMobile}
+                      onChange={(e) => setPayfastMobile(e.target.value.replace(/\D/g, "").slice(0, 11))}
+                      placeholder="03XXXXXXXXX"
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">CNIC Number</label>
+                    <input
+                      type="text"
+                      value={payfastCnic}
+                      onChange={(e) => setPayfastCnic(e.target.value.replace(/\D/g, "").slice(0, 13))}
+                      placeholder="XXXXXXXXXXXXX"
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">Account Number</label>
+                    <input
+                      type="text"
+                      value={payfastAccountNumber}
+                      onChange={(e) => setPayfastAccountNumber(e.target.value.trim())}
+                      placeholder="Wallet/Account Number"
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-900 mb-2">Bank Code</label>
+                    <input
+                      type="text"
+                      value={payfastBankCode}
+                      onChange={(e) => setPayfastBankCode(e.target.value.trim())}
+                      placeholder="Bank Code"
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    />
+                  </div>
+                  {payfastTransactionId && (
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">OTP</label>
+                      <input
+                        type="text"
+                        value={payfastOtp}
+                        onChange={(e) => setPayfastOtp(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                        placeholder="Enter OTP"
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">OTP received. Enter it and submit again to complete payment.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="flex justify-between items-center text-sm">
                 <span className="text-slate-600">Rate ({duration} mins)</span>
                 <span className="font-medium text-slate-900">${getRate().toFixed(2)}</span>
@@ -452,7 +564,7 @@ export default function BookingPage({
               </div>
               <div className="text-xs text-slate-500 flex items-center gap-1.5 pt-1">
                 <AlertCircle className="w-3.5 h-3.5" />
-                {selectedProvider === "manual" ? "This will create a pending manual payment" : `You will be redirected to secure ${enabledProviders.find((provider) => provider.provider === selectedProvider)?.display_name || selectedProvider} checkout`}
+                {selectedProvider === "manual" ? "This will create a pending manual payment" : selectedProvider === "payfast" && payfastTransactionId ? "Enter OTP and submit again to complete PayFast payment" : `You will be redirected to secure ${enabledProviders.find((provider) => provider.provider === selectedProvider)?.display_name || selectedProvider} checkout`}
               </div>
             </div>
 
@@ -462,7 +574,7 @@ export default function BookingPage({
               className="w-full bg-slate-900 hover:bg-black disabled:bg-slate-300 disabled:text-slate-500 text-white font-semibold py-4 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg disabled:shadow-none"
             >
               {loading && <Loader className="w-5 h-5 animate-spin" />}
-              {loading ? "Processing Booking..." : selectedProvider === "manual" ? "Confirm & Request Booking" : `Continue to ${enabledProviders.find((provider) => provider.provider === selectedProvider)?.display_name || "Checkout"}`}
+              {loading ? "Processing Booking..." : selectedProvider === "manual" ? "Confirm & Request Booking" : selectedProvider === "payfast" && payfastTransactionId ? "Confirm PayFast OTP" : `Continue to ${enabledProviders.find((provider) => provider.provider === selectedProvider)?.display_name || "Checkout"}`}
             </button>
           </form>
         </div>

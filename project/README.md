@@ -167,3 +167,58 @@ Frontend behavior:
 - user enters `03XXXXXXXXX` mobile number
 - edge function submits `initiate-ma-transaction`
 - on success booking becomes `confirmed` and payment becomes `completed`
+
+### JazzCash
+
+The current project now supports the provided TPS/PayAxis `MWALLET` SOAP payment API flow server-side.
+
+Required secrets:
+
+```bash
+supabase secrets set JAZZCASH_MERCHANT_ID=your_merchant_id JAZZCASH_PASSWORD=your_password JAZZCASH_INTEGRITY_SALT=your_integrity_salt JAZZCASH_RETURN_URL=https://your-domain.com/payment/jazzcash-return
+```
+
+Deploy function:
+
+```bash
+supabase functions deploy jazzcash-create-payment
+supabase functions deploy jazzcash-webhook
+```
+
+Frontend behavior:
+- user selects `JazzCash` during booking
+- user enters `03XXXXXXXXX` mobile number
+- edge function creates a `MWALLET` SOAP request through `DoPaymentViaAPI`
+- secure hash is generated server-side
+- successful `000` response marks booking `confirmed` and payment `completed`
+
+### PayFast
+
+The current project now supports the PayFast REST validate + transaction flow for wallet/account payments.
+
+Required secrets:
+
+```bash
+supabase secrets set PAYFAST_MERCHANT_ID=your_merchant_id PAYFAST_SECURED_KEY=your_secured_key PAYFAST_MERCHANT_CATEGORY_CODE=your_category_code PAYFAST_ACCOUNT_TYPE_ID=4
+```
+
+Optional override:
+
+```bash
+supabase secrets set PAYFAST_BASE_URL=https://ipguat.apps.net.pk/Ecommerce/api
+```
+
+Deploy function:
+
+```bash
+supabase functions deploy payfast-create-payment
+supabase functions deploy payfast-webhook
+```
+
+Frontend behavior:
+- user selects `PayFast`
+- user enters mobile, CNIC, account number, and bank code
+- booking submit triggers `customer/validate`
+- OTP is sent to customer
+- user enters OTP and submits again
+- `transaction` completes payment and confirms booking
